@@ -1,7 +1,13 @@
-﻿using System;
+﻿using Dapper;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Web;
 using System.Web.UI;
@@ -38,6 +44,9 @@ namespace BasicWebForm
             // Realizar la petición POST al endpoint
             using (HttpClient client = new HttpClient())
             {
+                // Agregar el encabezado de autenticación Basic al cliente HTTP
+                //client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+
                 // Configurar la cabecera para indicar que estamos enviando JSON
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
@@ -47,7 +56,7 @@ namespace BasicWebForm
 
                 // Leer el contenido de la respuesta
                 string base64Pdf = response.Content.ReadAsStringAsync().Result;
-
+                InsertInfoIntoDb(name_value, document, address, base64Pdf);
                 // Aquí podrías realizar alguna acción con el PDF en base64,
                 // como descargarlo o mostrarlo en la página.
                 // Por ejemplo, para descargarlo:
@@ -56,6 +65,25 @@ namespace BasicWebForm
                 Response.BinaryWrite(Convert.FromBase64String(base64Pdf));
                 Response.End();
             }
+        }
+
+        private void InsertInfoIntoDb(string Name, string Document, string Address, string PdfBase64)
+        {
+            string connection_string = "Server=localhost;Database=MuestrasRadiologicas;Trusted_Connection=True;";
+            string stored_procedure = "clientes.sp_clientes_BasicInformation_Insert";
+            var values = new { Name, Document, Address, PdfBase64};
+            using (SqlConnection cnn = new SqlConnection(connection_string))
+            {
+                var results = cnn.Query(stored_procedure, values, commandType: CommandType.StoredProcedure).ToList();
+            }
+        }
+
+        private void BasicAuthentication()
+        {
+            string username = "";
+            string password = "";
+            string credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}"));
+
         }
     }
 }
